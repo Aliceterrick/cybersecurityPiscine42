@@ -5,28 +5,43 @@ import requests
 import time
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
+import sys
+import codecs
+
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 class	ImageDownloader:
-	def	__init__(self, url, it, folder):
+	def	__init__(self, url, it, folder, bot):
 		self.url = url
 		self.folder = folder
 		self.visitedURLs = set()
 		self.botParsers = {}
-		self.iter = it
+		self.depth = it
+		self.bot = bot
 		self.domain = urlparse(url).netloc
 		self.botID = "PoliteImageScrapper/1.0 (Educational Project)"
+		self.validExtends = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
+		self.mimeExtends = {'image/jpeg' : '.jpeg',
+							'image/jpg' : '.jpg',
+							'image/png' : '.png',
+							'image/gif' : '.gif',
+							'image/bmp' : '.bmp'}
+		self.increm = 0
+
 		os.makedirs(self.folder, exist_ok=True)
 
 	def getBotParser(self, url):
+		if not self.bot:
+			return None
 		parsed = urlparse(url)
 		key = (parsed.scheme, parsed.netloc)
 		if key not in self.botParsers:
 			rp = RobotFileParser()
-			botsURL = f"{parsed.scheme}:://{parsed.netloc}/robots.txt"
+			botsURL = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 			rp.set_url(botsURL)
 			try:
 				rp.read()
-				print(f"robots.txt found for {parsed.netloc}: {'reachable' if rp.can_fetch(self.botID, '/') else 'blocked'}")
+				print(f"robots.txt found for {parsed.netloc}")
 			except Exception as e:
 				print(f"robots.txt unreadable for {parsed.netloc}: {e}")
 				rp = None
@@ -41,56 +56,68 @@ class	ImageDownloader:
 	
 	def	isValidURL(self, url):
 		parsed = urlparse(url)
-		return parsed.netloc == self.domain and parsed.scheme in ["http", "https"]
+		return parsed.netloc.endswith(self.domain) and parsed.scheme in ["http", "https"]
 
 	def	downloadIMG(self, imgURL):
-		if self.iter >= 0:
-			return
-		self.iter -= 1
 		try:
-			response = requests.get(imgURL, stream=True, headers={"User-Ageget": self.botID})
+			response = requests.get(imgURL, stream=True, headers={"User-Agent": self.botID}, timeout=10)
 			if response.status_code == 200:
-				filename = os.path.join(self.folder, os.path.basename(urlparse(imgURL).path) or "image.jpg")
+				content = response.headers.get('Content-Type', '')
+				if not content.startswith('image/'):
+					print(f"Invalid MIME type: {content} for {imgURL}")
+					return
+				extension = self.mimeExtends.get(content, 'not supported')
+				if extension == 'not supported':
+					print(f"Image type not supported : {imgURL}")
+					return
+				filename = os.path.join(self.folder, os.path.basename(urlparse(imgURL).path) or f"image{self.increm}.jpg")
+				if filename == f"image{self.increm}.jpg":
+					self.increm += 1
+				elif not filename.endswith(extension):
+					filename += extension
 				with open(filename, 'wb') as f:
 					for chunk in response.iter_content(1024):
 						f.write(chunk)
-				print(f"{filename} downloaded")
+				print(f"Image successfully downloaded : {imgURL}")
+			else:
+				print(f"Error  {response.status_code} downloading {imgURL}")
 		except Exception as e:
 			print(f"Error downloading {imgURL}: {str(e)}")
 	
 	def extractURLs(self, html, url):
-		imgPattern = re.compile(r'<img[^>]+src=(["\'])(.*?)\1', re.IGNORECASE)
-		imgURLs = [urljoin(url, match[1]) for match in imgPattern.findall(html)]
-		
-		linkPattern = re.compile(r'<a[^>]+href=(["\'])(.*?)\1', re.IGNORECASE)
-		linkURLs = [urljoin(url, match[1]) for match in linkPattern.findall(html)]
+		imgPattern = re.compile(r'<img[^>]+(?:src|srcset|data-src)=["\'](.*?)["\']', re.IGNORECASE)
+		imgURLs = []
+		for src in imgPattern.findall(html):
+			first_url = src.split(',')[0].split()[0]
+			imgURLs.append(urljoin(url, first_url))
+		linkPattern = re.compile(r'<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
+		linkURLs = [urljoin(url, match) for match in linkPattern.findall(html) if match.startswith(('http', '/'))]
 
 		return imgURLs, linkURLs
 	
-	def scrapePage(self, url):
-		if url in self.visitedURLs:
+	def spider(self, url, currentDepth=0):
+		if url in self.visitedURLs or currentDepth >= self.depth:
 			return
-		if not self.isAllowedForBots(url):
-			print(f"⚠️ Bloqué par robots.txt: {url}")
+		if self.bot and not self.isAllowedForBots(url):
+			print(f"⚠️  Blocked by robots.txt")
 			return
 		self.visitedURLs.add(url)
 
 		try:
-			print(f"Scrapping: {url}")
 			response = requests.get(url, headers={"User-Agent": self.botID})
 			html = response.text
 
+			
 			rp = self.getBotParser(url)
-			delay = rp.crawl_delay(self.botID) if rp else 0
-			time.sleep(delay or 1)
+			delay = rp.crawl_delay(self.botID) if self.bot and rp else 0
+			time.sleep(delay or 0.3)
 			imgURLs, linkURLs = self.extractURLs(html, url)
-
 			for imgURL in imgURLs:
 				self.downloadIMG(imgURL)
 							
 			for link in linkURLs:
-				if self.isValidURL(link) and self.isAllowedForBots(link):
-					self.scrapePage(link)
+				if self.isValidURL(link):
+					self.spider(link, currentDepth + 1)
 		
 		except Exception as e:
 			print(f"Error with {url}: {str(e)}")
@@ -110,17 +137,16 @@ def	parseArgs():
 	parser.add_argument("-r", "--recursive", action="store_true")
 	parser.add_argument("-l", "--depth", default="5", type=int)
 	parser.add_argument("-p", "--path", default="./data", type=str)
+	parser.add_argument("-b", "--bot", action="store_true")
 	return parser.parse_args()
 
 def main():
-	print("entered")
 	try:
 		args = parseArgs()
 	except argparse.ArgumentTypeError as ate:
 		print(f"Error: {ate}.")
 		exit(1)
-	print("parsed")
-	downloader = ImageDownloader(args.url, args.depth, args.path)
-	downloader.scrapePage(args.url)
+	downloader = ImageDownloader(args.url, args.depth, args.path, args.bot)
+	downloader.spider(args.url)
 
 main()
