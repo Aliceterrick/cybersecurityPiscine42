@@ -106,11 +106,9 @@ class	ImageDownloader:
 		try:
 			response = requests.get(url, headers={"User-Agent": self.botID})
 			html = response.text
-
-			
 			rp = self.getBotParser(url)
 			delay = rp.crawl_delay(self.botID) if self.bot and rp else 0
-			time.sleep(delay or 0.3)
+			#time.sleep(delay or 0.3)
 			imgURLs, linkURLs = self.extractURLs(html, url)
 			for imgURL in imgURLs:
 				self.downloadIMG(imgURL)
