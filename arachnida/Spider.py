@@ -73,8 +73,11 @@ class	ImageDownloader:
 				filename = os.path.join(self.folder, os.path.basename(urlparse(imgURL).path) or f"image{self.increm}.jpg")
 				if filename == f"image{self.increm}.jpg":
 					self.increm += 1
-				elif not filename.endswith(extension):
-					filename += extension
+				elif not filename.endswith(extension, re.IGNORECASE):
+					if extension != ".jpeg" and extension:
+						filename += extension
+					elif not filename.endswith(".jpg", re.IGNORECASE) and not filename.endswith(".JPG", re.IGNORECASE):
+						filename += extension
 				with open(filename, 'wb') as f:
 					for chunk in response.iter_content(1024):
 						f.write(chunk)
@@ -88,27 +91,30 @@ class	ImageDownloader:
 		imgPattern = re.compile(r'<img[^>]+(?:src|srcset|data-src)=["\'](.*?)["\']', re.IGNORECASE)
 		imgURLs = []
 		for src in imgPattern.findall(html):
-			first_url = src.split(',')[0].split()[0]
-			imgURLs.append(urljoin(url, first_url))
-		linkPattern = re.compile(r'<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
-		linkURLs = [urljoin(url, match) for match in linkPattern.findall(html) if match.startswith(('http', '/'))]
-
+			firstUrl = src.split(',')[0].split()[0]
+			imgURLs.append(urljoin(url, firstUrl))
+		linkPattern = re.compile(r'<a[^>]+href=(["\'])(.*?)\1', re.IGNORECASE)
+		linkURLs = [
+			urljoin(url, match[1]) 
+			for match in linkPattern.findall(html) 
+			if match[1].strip()
+		]
 		return imgURLs, linkURLs
 	
 	def spider(self, url, currentDepth=0):
-		if url in self.visitedURLs or currentDepth >= self.depth:
+		if url in self.visitedURLs or currentDepth > self.depth:
 			return
 		if self.bot and not self.isAllowedForBots(url):
 			print(f"⚠️  Blocked by robots.txt")
 			return
 		self.visitedURLs.add(url)
-
+		print(f"\033[1;31mVisiting: {url}, depth: {currentDepth}\033[0m")
 		try:
 			response = requests.get(url, headers={"User-Agent": self.botID})
 			html = response.text
 			rp = self.getBotParser(url)
 			delay = rp.crawl_delay(self.botID) if self.bot and rp else 0
-			#time.sleep(delay or 0.3)
+			time.sleep(delay or 0.3)
 			imgURLs, linkURLs = self.extractURLs(html, url)
 			for imgURL in imgURLs:
 				self.downloadIMG(imgURL)
@@ -141,6 +147,8 @@ def	parseArgs():
 def main():
 	try:
 		args = parseArgs()
+		if not args.recursive:
+				args.depth = 0
 	except argparse.ArgumentTypeError as ate:
 		print(f"Error: {ate}.")
 		exit(1)

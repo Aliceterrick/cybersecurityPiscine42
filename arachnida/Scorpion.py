@@ -1,6 +1,6 @@
 import os
 import argparse
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ExifTags, UnidentifiedImageError
 from PIL.ExifTags import TAGS
 import exifread
 from datetime import datetime
@@ -38,6 +38,19 @@ def extractImgMetadata(file_path):
         metadata["image_error"] = str(e)
     return metadata
 
+def convertCoordinate(values, ref):
+    degrees = float(values[0].num) / values[0].den
+    minutes = float(values[1].num) / values[1].den
+    seconds = float(values[2].num) / values[2].den
+    
+    decimal = degrees + (minutes / 60) + (seconds / 3600)
+    
+    direction = ref.values if isinstance(ref, exifread.utils.Ratio) else ref
+    if direction in ['S', 'W']:
+        decimal = -decimal
+    
+    return round(decimal, 6)
+
 def extractExifreadMetadata(filePath):
     metadata = {}
     with open(filePath, 'rb') as f:
@@ -48,44 +61,49 @@ def extractExifreadMetadata(filePath):
                 for tag, value in tags.items()
                 if "EXIF" in str(tag)
             }
-        gps_data = {}
+        gpsData = {}
         if "GPS GPSLatitude" in tags and "GPS GPSLatitudeRef" in tags:
-            gps_data["latitude"] = _convert_gps_coordinate(
-                tags["GPS GPSLatitude"].values,
-                tags["GPS GPSLatitudeRef"].values
-            )
+            gpsData["latitude"] = convertCoordinate(tags["GPS GPSLatitude"].values, tags["GPS GPSLatitudeRef"].values)
         if "GPS GPSLongitude" in tags and "GPS GPSLongitudeRef" in tags:
-            gps_data["longitude"] = _convert_gps_coordinate(
-            tags["GPS GPSLongitude"].values,
-            tags["GPS GPSLongitudeRef"].values
-            )
-        if gps_data:
-            metadata["GPS"] = gps_data
+            gpsData["longitude"] = convertCoordinate(tags["GPS GPSLongitude"].values,tags["GPS GPSLongitudeRef"].values)
+        if gpsData:
+            metadata["GPS"] = gpsData
     return metadata
+
+def deleteMetadata(path):
+    img = Image.open(path)
+    data = list(img.getdata())
+    img = Image.new(img.mode, img.size)
+    img = Image.new(img.mode, img.size)
+    img.putdata(data)
+    img.save(path)
+    print(f"Metadata deleted for {path}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Metadata extractor")
     parser.add_argument("files", nargs='+')
+    parser.add_argument("-d", "--delete", action="store_true")
     args = parser.parse_args()
     
     for filePath in args.files:
         if not os.path.exists(filePath):
             print(f"{filePath} not found")
             continue
-        meta = extractFileMetadata(filePath)
-        meta.update(extractImgMetadata(filePath))
-        meta.update(extractExifreadMetadata(filePath))
-        for category, data in meta.items():
-            if category == "GPS":
-                print("Localisation GPS:")
-                print(f"  Latitude: {data.get('latitude', 'N/A')}")
-                print(f"  Longitude: {data.get('longitude', 'N/A')}")
-            if isinstance(data, dict):
-                print(f"\n---- {category} ----")
-                for key, value in data.items():
-                    print(f"{key}: {value}")
+        if not args.delete:
+            meta = extractFileMetadata(filePath)
+            meta.update(extractImgMetadata(filePath))
+            meta.update(extractExifreadMetadata(filePath))
+            for category, data in meta.items():
+                if isinstance(data, dict):
+                    print(f"\n---- {category} ----\n")
+                    for key, value in data.items():
+                        print(f"{key}: {value}")
+                else:
+                    print(f"{data}")
+
         else:
-            print(f"{data}")
+            deleteMetadata(filePath)
     
     if not filePath in args.files:
         print("please provide at least a path for an image to analyze")
