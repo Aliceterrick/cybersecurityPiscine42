@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:15
+    container_name: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    restart: unless-stopped
+    env_file:
+     - .env
+   
+  onion-service:
+    build: .
+    depends_on: 
+      - db
+    volumes:
+      - tor_data:/var/lib/tor
+    networks:
+      - backend
+      - frontend
+    ports:
+      - "8080:80"
+      - "4243:4242"
+    restart: unless-stopped
+    env_file:
+      - .env
+
+volumes:
+  tor_data:
+  postgres_data:
+
+networks:
+  frontend:
+  backend:
