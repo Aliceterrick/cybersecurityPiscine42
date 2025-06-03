@@ -23,9 +23,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your_secret_key',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
+app.use(express.static(path.join(__dirname, 'app')))
 
 async function initDB() {
     try {
@@ -37,12 +42,19 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS online (
+                username VARCHAR(50) UNIQUE NOT NULL
+            )
+        `);
+        await pool.query(`
+            DELETE FROM online
+        `)
         console.log('Database initialized');
     } catch (err) {
         console.error('Database initialization error:', err);
     }
 }
-
 
 app.post('/api/login', async (req, res) => {
     const { pseudo, password } = req.body;
@@ -53,17 +65,20 @@ app.post('/api/login', async (req, res) => {
     );
  
     if (result.rows.length === 0) {
-        return res.json({ success: false, message: 'Invalid username' });
+        return res.status(401).json({ success: false, message: 'Unknown username' });
     }
         
     const user = result.rows[0];
     const validPassword = await bcrypt.compare(password, user.password);
         
     if (!validPassword) {
-       return res.json({ success: false, message: 'Invalid password' });
+       return res.status(401).json({ success: false, message: 'Invalid password' });
     }
-        
-    req.session.user = { id: user.id, pseudo: user.username };
+    await pool.query(
+        'INSERT INTO online (username) VALUES ($1)',
+        [username]
+    );
+    req.session.user = { id: user.id, username: user.username };
     res.json({ success: true });
 });
 
@@ -92,6 +107,40 @@ app.post('/api/signup', async (req, res) => {
     } catch (err) {
         console.error('Signup error:', err);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+app.post('/api/get_online', async (res) => {
+    const online = await pool.query(
+        'SELECT * FROM online'
+    )
+    res.json({online})
+});
+
+/* app.post('/api/logout', async (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({success: false});
+        }
+        await pool.query(
+            'DELETE FROM online WHERE username = $1',
+            [username]
+        );
+        res.clearCookie('connect.sid')
+        res.json({success: true});
+    });
+}); */
+
+app.get('/api/auth/status', (req, res) => {
+    if (req.session.user) {
+        res.json({
+            authenticated: true,
+            user: req.session.user
+        });
+    } else {
+        res.json({
+            authenticated: false
+        });
     }
 });
 

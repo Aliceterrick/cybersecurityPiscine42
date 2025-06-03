@@ -20,8 +20,8 @@ services:
       - backend
       - frontend
     ports:
-      - "8080:80"
-      - "4243:4242"
+      - "80:80"
+      - "4241:4242"
     restart: unless-stopped
     env_file:
       - .env

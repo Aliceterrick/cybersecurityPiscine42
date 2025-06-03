@@ -1,37 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="/css/signup.css">
-        <script src="/js/signup.js"></script>
-        <title>The Hidden Chat</title>
-    </head>
-    <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hidden Chat - Sign Up</title>
+    <script src="/js/signup.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Create Account</h1>
         <div id="message"></div>
         <form id="signForm">
             <ul>
                 <li>
                     <label for="pseudo">Pseudo</label>
-                    <input type="text" id="pseudo" required>
+                    <input type="text" id="pseudo" placeholder="Choose a username" required>
                 </li>
                 <li>
                     <label for="password">Password</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" placeholder="Create a password" required>
                 </li>
                 <li>
                     <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" required>
+                    <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
                 </li>
-                <div class="button">
-                    <button type="submit">Create Account</button>
-                </div>
             </ul>
+            <div class="button-container">
+                <button type="submit">Create Account</button>
+            </div>
         </form>
-        <label for="login">Already have an account?</label>
-        <div class="button">
-            <a href="/login" class="button-link">Log In</a>
+        <div class="switch-container">
+            <span class="switch-label">Already have an account?</span>
+            <button class="switch-button" onclick="window.location.href = '/';">Log In</button>
         </div>
-    </body>
+    </div>
+</body>
 </html>

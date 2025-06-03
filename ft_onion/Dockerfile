@@ -29,9 +29,6 @@ RUN mkdir /run/sshd && \
     ssh-keygen -A && \
     rm /etc/ssh/sshd_config
 
-COPY /app/html/index.html /var/www/html
-
-
 RUN mkdir -p /app
 WORKDIR /app
     

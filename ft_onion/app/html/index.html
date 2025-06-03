@@ -1,33 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-    <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link rel="stylesheet" href="/css/index.css">
-            <script src="/js/login.js"></script>
-            <title>The Hidden Chat</title>
-    </head>
-    <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hidden Chat - Login</title>
+    <script src="/js/login.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
         <div id="message"></div>
         <form id="logForm">
             <ul>
                 <li>
                     <label for="pseudo">Pseudo</label>
-                    <input type="text" id="pseudo" required>
+                    <input type="text" id="pseudo" placeholder="Enter your username" required>
                 </li>
                 <li>
                     <label for="password">Password</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" placeholder="Enter your password" required>
                 </li>
-                <div class="button">
-                    <button type="submit">Login</button>
-                </div>
             </ul>
+            <div class="button-container">
+                <button type="submit">Login</button>
+            </div>
         </form>
-        <label for="signup">Didn't have an account yet?</label>
-        <div class="button">
-            <a href="/signup" class="button-link">Sign Up</a>
+        <div class="switch-container">
+            <span class="switch-label">Didn't have an account yet?</span>
+            <button class="switch-button" onclick="window.location.href = '/signup';">Sign Up</button>
         </div>
-    </body>
+    </div>
+</body>
 </html>
