@@ -18,16 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({pseudo, password})
     });
-    console.log('here0');
     const result = await response.json();
-    console.log('here');
     if (result.success) {
-        console.log('here&');
         window.location.href = '/home';
     } else {
-        console.log('here2');
         showMessage(result.message, 'error');
     }
-    console.log('here3');
     });
 });

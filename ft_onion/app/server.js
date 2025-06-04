@@ -39,17 +39,11 @@ async function initDB() {
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(100) NOT NULL,
+                status VARCHAR(30) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS online (
-                username VARCHAR(50) UNIQUE NOT NULL
-            )
-        `);
-        await pool.query(`
-            DELETE FROM online
-        `)
+        await pool.query('UPDATE users SET status = $1', ["offline"])
         console.log('Database initialized');
     } catch (err) {
         console.error('Database initialization error:', err);
@@ -75,8 +69,7 @@ app.post('/api/login', async (req, res) => {
        return res.status(401).json({ success: false, message: 'Invalid password' });
     }
     await pool.query(
-        'INSERT INTO online (username) VALUES ($1)',
-        [username]
+        'UPDATE users * FROM users WHERE username = $1 set status = $2', [pseudo, "online"]
     );
     req.session.user = { id: user.id, username: user.username };
     res.json({ success: true });
@@ -99,8 +92,8 @@ app.post('/api/signup', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         await pool.query(
-            'INSERT INTO users (username, password) VALUES ($1, $2)',
-            [username, hashedPassword]
+            'INSERT INTO users (username, password, status) VALUES ($1, $2, $3)',
+            [username, hashedPassword, "offline"]
         );
         
         res.json({ success: true });
@@ -112,7 +105,7 @@ app.post('/api/signup', async (req, res) => {
 
 app.post('/api/get_online', async (res) => {
     const online = await pool.query(
-        'SELECT * FROM online'
+        'SELECT * FROM users WHERE status = $1', ["online"]
     )
     res.json({online})
 });
