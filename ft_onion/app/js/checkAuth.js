@@ -15,9 +15,7 @@ function redirectToLogin() {
 
 document.addEventListener('DOMContentLoaded', () => {
     const protectedPages = ['/home'];
-    console.log('auth check starting');
     if (protectedPages.some(page => window.location.pathname.endsWith(page))) {
-        console.log("checking auth");
         checkAuth();
     }
 });

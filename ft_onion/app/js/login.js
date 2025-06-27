@@ -17,12 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({pseudo, password})
-    });
-    const result = await response.json();
-    if (result.success) {
-        window.location.href = '/home';
-    } else {
-        showMessage(result.message, 'error');
-    }
+        });
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = '/home';
+        } else {
+            showMessage(result.message, 'error');
+        }
     });
 });

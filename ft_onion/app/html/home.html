@@ -1,26 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-    <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link rel="stylesheet" href="/css/home.css">
-            <script defer src="/js/checkAuth.js"></script>
-            <script defer src="/js/home.js"></script>
-            <title>The Hidden Chat - Home</title>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="/css/home.css">
+        <script defer src="/js/checkAuth.js"></script>
+        <script defer src="/js/home.js"></script>
+        <title>The Hidden Chat - Home</title>
     </head>
     <body>
-        <div class="container">
-            <div class="switch-container">
-                <button class="switch-button" onclick="window.location.href = '/settings';">Settings</button>
+        <div id="message"></div>
+        
+        <div class="switch-container">
+            <button class="logout" id="logout">Log Out</button>
+        </div>
+        
+        <div class="main-container">
+            <div class="users-list-container">
+                <h3>Online Users</h3>
+                <div class="users-list" id="users-list">
+                    <div class="user-item">Loading users...</div>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-header">General Chat</div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message">
+                        <div class="message-header">
+                            <span>System</span>
+                            <span>Just now</span>
+                        </div>
+                        <div class="message-content">
+                            Welcome to the Hidden Chat!
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Type your message...">
+                    <button id="send-button">Send</button>
+                </div>
             </div>
         </div>
-            <div class="switch-container">
-                <button class="logout" id="logout">Log Out</button>
-            </div>
-        </div>
-        <div class="users-list" id="users-list"></div>
-        <div class="General Chat"></div>
-    </div>
     </body>
-    </html>
+</html>

@@ -10,6 +10,7 @@ all: setup run
 setup:
 	mkdir -p ${TARGET}
 	touch ${addprefix ${TARGET}, ${TARGET_SRCS}}
+	echo "Hello world!" > ${addprefix ${TARGET}, ${TARGET_SRCS}} 
 
 run:
 	python3 Stockholm.py

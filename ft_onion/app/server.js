@@ -43,6 +43,14 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
         await pool.query('UPDATE users SET status = $1', ["offline"])
         console.log('Database initialized');
     } catch (err) {
@@ -69,7 +77,7 @@ app.post('/api/login', async (req, res) => {
        return res.status(401).json({ success: false, message: 'Invalid password' });
     }
     await pool.query(
-        'UPDATE users * FROM users WHERE username = $1 set status = $2', [pseudo, "online"]
+        'UPDATE users SET status = $1 WHERE username = $2', ["online", pseudo]
     );
     req.session.user = { id: user.id, username: user.username };
     res.json({ success: true });
@@ -103,26 +111,55 @@ app.post('/api/signup', async (req, res) => {
     }
 });
 
-app.post('/api/get_online', async (res) => {
+
+app.post('/api/logout', async (req, res) => {
+    
+    if (!req.session.user) {
+        return res.status(400).json({success: false, message: 'Not logged in'});
+    }
+
+    const username = req.session.user.username;
+    
+    await pool.query(
+        'UPDATE users SET status = $1 WHERE username = $2',
+        ["offline", username]
+    );
+    
+        req.session.destroy(err => {
+        if (err) {
+            console.error('Session destroy error:', err);
+            return res.status(500).json({success: false, message: 'Failed to destroy session'});
+        }
+        
+        res.clearCookie('connect.sid');
+        res.json({success: true});
+    });
+});
+
+app.post('/api/messages', async (req, res) => {
+    const { content } = req.body;
+    if (!content || content.trim === '') {
+        return res.status(400).json({ error: 'Message content required' });
+    }
+
+    try {
+        await pool.query(
+            'INSERT INTO messages (user_id, content) VALUES ($1, $2)',
+            [req.session.user.id, content.trim()]
+        );
+    } catch (err) {
+        console.error('Message send error: ', err);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+
+app.get('/api/get_online', async (req, res) => {
     const online = await pool.query(
         'SELECT * FROM users WHERE status = $1', ["online"]
     )
     res.json({online})
 });
-
-/* app.post('/api/logout', async (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({success: false});
-        }
-        await pool.query(
-            'DELETE FROM online WHERE username = $1',
-            [username]
-        );
-        res.clearCookie('connect.sid')
-        res.json({success: true});
-    });
-}); */
 
 app.get('/api/auth/status', (req, res) => {
     if (req.session.user) {
@@ -134,6 +171,22 @@ app.get('/api/auth/status', (req, res) => {
         res.json({
             authenticated: false
         });
+    }
+});
+
+app.get('/api/messages', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT messages.*, users.username 
+            FROM messages 
+            JOIN users ON messages.user_id = users.id
+            ORDER BY created_at DESC
+            LIMIT 50
+        `);
+        res.json(result.rows.reverse());
+    } catch (err) {
+        console.error('Messages fetch error:', err);
+        res.status(500).json({ error: 'Failed to load messages' });
     }
 });
 
