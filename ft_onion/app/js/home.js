@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUser = null;
     let eventSource = null;
-    let reconnectTimer = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 10;
+    let reconnectDelay = 1000;
 
     function showMessage(msg, className) {
         messageDiv.textContent = msg;
@@ -66,11 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function initSSE() {
         if (eventSource) {
             eventSource.close();
+            eventSource = null;
         }
 
         eventSource = new EventSource('/api/events', {
             withCredentials: true
         });
+
+        reconnectAttempts = 0;
+        reconnectDelay = 1000;
+
+        eventSource.onopen = () => {
+            showMessage('Chat connected', success);
+        } 
 
         eventSource.addEventListener('newMessage', (event) => {
             try {
@@ -86,6 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         eventSource.addEventListener('connected', (event) => {
             showMessage('Connected to chat', 'success');
+            /*  */   /*  */    /*  */      /*  */      /*  */
+
+
+            /*  */   /*  */    /*  */      /*  */      /*  */
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
                 reconnectTimer = null;
@@ -94,15 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         eventSource.onerror = (error) => {
             console.error('SSE error:', error);
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
-            }
-            if (!reconnectTimer) {
-                showMessage('Connection lost. Reconnecting...', 'error');
-                reconnectTimer = setTimeout(() => {
-                    initSSE();
-                }, 3000);
+            if (eventSource.readyState === EventSource.CLOSED) {
+                console.log('SSE connection closed');
+                attemptReconnect();
             }
         };
     }

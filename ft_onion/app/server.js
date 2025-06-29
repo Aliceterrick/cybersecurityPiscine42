@@ -141,9 +141,10 @@ app.post('/api/logout', async (req, res) => {
 function broadcastEvent(event, data) {
     const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
-    clients.forEach((res, clientId) => {
+    clients.forEach((client, clientId) => {
         try {
-            res.write(payload);
+            client.response.write(payload);
+            client.lastPing = Date.now();
         } catch (error) {
             console.error(`Error sending event to client ${clientId}:`, error);
             clients.delete(clientId);
@@ -214,16 +215,33 @@ app.get('/api/events', (req, res) => {
 
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Content-Encoding': 'none'
     });
 
     const userId = req.session.user.id;
     const clientId = Date.now();
 
-    clients.set(clientId, res);
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId})}\n\n)`)
+    clients.set(clientId, {
+        response: res,
+        lastPing: Date.now()
+    });
+
+    res.write(': init\n\n');
+    res.write(`event: connected\ndata: ${JSON.stringify({ clientId})}\n\n)`);
+    const pingInterval = setInterval(() => {
+        try {
+            res.write(': ping\n\n');
+            clients.get(clientId).lastPing = Date.now();
+        } catch (e) {
+            clearInterval(pingInterval);
+        }
+    }, 10000);
+
     req.on('close', () => {
+        clearInterval(pingInterval);
         clients.delete(clientId);
     });
     
@@ -251,3 +269,15 @@ initDB().then(() => {
         console.log(`Server running on port ${PORT}`);
     });
 });
+
+setInterval(() => {
+    const now = Date.now();
+    clients.forEach((client, clientId) => {
+        if (now - client.LastPing > 40000) {
+            try {
+                client.response.end();
+            } catch (e) {}
+        }
+        clients.delete(clientId);
+    });
+}, 50000);
