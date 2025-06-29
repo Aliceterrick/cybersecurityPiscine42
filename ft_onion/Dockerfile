@@ -48,6 +48,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY /app /app
 
 RUN npm install -g pm2
+RUN npm install ws
 
 EXPOSE 80 4242
 

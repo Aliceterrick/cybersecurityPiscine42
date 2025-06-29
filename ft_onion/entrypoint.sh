@@ -21,7 +21,7 @@ echo "=== .ONION ADDRESS ==="
 cat /var/lib/tor/hidden_service/hostname
 
 
-if [ -n "$SSH_USER" && ! /home/$SSH_USER/.ssh ]; then
+if [ -n "$SSH_USER" ] && [ ! /home/$SSH_USER/.ssh ]; then
     useradd -m -s /bin/bash "$SSH_USER"
     mkdir -p "/home/$SSH_USER/.ssh"
     echo "$SSH_PUBKEY" > "/home/$SSH_USER/.ssh/authorized_keys"

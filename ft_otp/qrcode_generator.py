@@ -1,5 +1,4 @@
 import qrcode
-import os
 from PIL import Image
 
 def qr_gen(otp):

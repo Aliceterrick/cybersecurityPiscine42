@@ -1,4 +1,3 @@
-import os
 import sys
 import hmac
 from cryptography.fernet import Fernet
@@ -75,7 +74,7 @@ def generate_otp(file):
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: python ft_otp.py (-g <filename> | -k <filename>)")
+        print("Usage: python ft_otp.py (-g <filename> | -k <filename> | -q <filename>)")
         sys.exit(1)
 
     action = sys.argv[1]

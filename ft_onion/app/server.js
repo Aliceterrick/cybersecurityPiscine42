@@ -4,9 +4,12 @@ const session = require('express-session');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const WebSocket = require('ws');
+const http = require('http');
 
 const app = express();
 const PORT = "3000";
+const clients = new Map();
 
 const pool = new Pool({
     user: process.env.DB_USER,
@@ -111,7 +114,6 @@ app.post('/api/signup', async (req, res) => {
     }
 });
 
-
 app.post('/api/logout', async (req, res) => {
     
     if (!req.session.user) {
@@ -136,6 +138,19 @@ app.post('/api/logout', async (req, res) => {
     });
 });
 
+function broadcastEvent(event, data) {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+    clients.forEach((res, clientId) => {
+        try {
+            res.write(payload);
+        } catch (error) {
+            console.error(`Error sending event to client ${clientId}:`, error);
+            clients.delete(clientId);
+        }
+    });
+}
+
 app.post('/api/messages', async (req, res) => {
     const { content } = req.body;
     if (!content || content.trim === '') {
@@ -143,10 +158,28 @@ app.post('/api/messages', async (req, res) => {
     }
 
     try {
-        await pool.query(
-            'INSERT INTO messages (user_id, content) VALUES ($1, $2)',
+        const result = await pool.query(
+            'INSERT INTO messages (user_id, content) VALUES ($1, $2) RETURNING *',
             [req.session.user.id, content.trim()]
         );
+        const newMessage = result.rows[0];
+
+        const userResult = await pool.query(
+            'SELECT username FROM users WHERE id = $1',
+            [req.session.user.id]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(500).json({ error: 'User not found' });
+        }
+        const messageData = {
+            ...newMessage,
+            username: userResult.rows[0].username
+        };
+
+        broadcastEvent('newMessage', messageData);
+
+        res.json({ success: true })
     } catch (err) {
         console.error('Message send error: ', err);
         res.status(500).json({ error: 'Failed to send message' });
@@ -174,6 +207,29 @@ app.get('/api/auth/status', (req, res) => {
     }
 });
 
+app.get('/api/events', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).end();
+    }
+
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+
+    const userId = req.session.user.id;
+    const clientId = Date.now();
+
+    clients.set(clientId, res);
+    res.write(`event: connected\ndata: ${JSON.stringify({ clientId})}\n\n)`)
+    req.on('close', () => {
+        clients.delete(clientId);
+    });
+    
+});
+
+
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -182,14 +238,14 @@ app.get('/api/messages', async (req, res) => {
             JOIN users ON messages.user_id = users.id
             ORDER BY created_at DESC
             LIMIT 50
-        `);
-        res.json(result.rows.reverse());
-    } catch (err) {
-        console.error('Messages fetch error:', err);
-        res.status(500).json({ error: 'Failed to load messages' });
-    }
-});
-
+            `);
+            res.json(result.rows.reverse());
+        } catch (err) {
+            console.error('Messages fetch error:', err);
+            res.status(500).json({ error: 'Failed to load messages' });
+        }
+    });
+    
 initDB().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server running on port ${PORT}`);

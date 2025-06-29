@@ -1,0 +1,61 @@
+XHRPOST
+http://fhschan2b4mrpcc2pn6f4aeey5b43hevwmvamt4zilmz5mowq6rpfhyd.onion/api/messages
+[HTTP/1.1 500 Internal Server Error 750ms]
+
+	
+POST
+	http://fhschan2b4mrpcc2pn6f4aeey5b43hevwmvamt4zilmz5mowq6rpfhyd.onion/api/messages
+Status
+500
+Internal Server Error
+VersionHTTP/1.1
+Transferred296 B (34 B size)
+Referrer Policystrict-origin-when-cross-origin
+Request PriorityHighest
+DNS ResolutionSystem
+
+	
+Connection
+	keep-alive
+Content-Length
+	34
+Content-Type
+	application/json; charset=utf-8
+Date
+	Sun, 29 Jun 2025 14:33:58 GMT
+ETag
+	W/"22-1QVuRbU1gx4onw0veoSekMD4GdI"
+Server
+	nginx/1.18.0 (Ubuntu)
+X-Powered-By
+	Express
+	
+Accept
+	*/*
+Accept-Encoding
+	gzip, deflate, br, zstd
+Accept-Language
+	en-US,en;q=0.5
+Connection
+	keep-alive
+Content-Length
+	18
+Content-Type
+	application/json
+Cookie
+	connect.sid=s%3AbfU93Z32r-mHA323vswf-aaUt3EQXX1h.j5Z0LX4anJKSG2vaz563RkQr6uUK8OOuJhbfWMnW4Ws
+Host
+	fhschan2b4mrpcc2pn6f4aeey5b43hevwmvamt4zilmz5mowq6rpfhyd.onion
+Origin
+	http://fhschan2b4mrpcc2pn6f4aeey5b43hevwmvamt4zilmz5mowq6rpfhyd.onion
+Priority
+	u=0
+Referer
+	http://fhschan2b4mrpcc2pn6f4aeey5b43hevwmvamt4zilmz5mowq6rpfhyd.onion/home
+Sec-Fetch-Dest
+	empty
+Sec-Fetch-Mode
+	cors
+Sec-Fetch-Site
+	same-origin
+Sec-GPC
