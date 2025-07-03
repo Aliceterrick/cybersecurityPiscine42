@@ -30,18 +30,11 @@ def save_key(filename):
         return
     try:
         with open('ft_otp.key', 'wb') as f:
-            f.write(fernet.encrypt(hexa.encode()))
+            f.write(fernet.encrypt(hexa))
     except:
         print('error saving key')
         return
     print("Key saved to ft_otp.key")
-
-def compress(p):
-    res = bytearray()
-    res.append(p[0] & 0x7f)
-    for b in p[1:]:
-        res.append(b & 0xFF)
-    return res
 
 def generate_otp(file):
     try:
@@ -53,24 +46,22 @@ def generate_otp(file):
         return
     try:
         with open(file, 'rb') as f:
-            key = f.read()
-        key = fkey.decrypt(key)
+            encr_key = f.read()
+        key = fkey.decrypt(encr_key).decode()
+        key_bytes = bytes.fromhex(key)
     except:
         print('Error reading the key')
         return
     counter = int(time.time() // 30)
     counter = counter.to_bytes(8, byteorder='big')
-    hs = hmac.new(key, counter, "sha1")
+    hs = hmac.new(key_bytes, counter, "sha1")
     hs = hs.digest()
-    offset = hs[19] & 0b1111
+    offset = hs[-1] & 0x0F
     p = hs[offset:offset+4]
-    totp = compress(p)
-    totp = int(totp.hex(), 16)
-    totp = str(totp % 10 ** 6)
-    while len(totp) < 6:
-        totp += '0'
-    print(f"your OTP is : {totp}")
-    return totp
+    code = int.from_bytes(p, byteorder='big') & 0x7FFFFFFF
+    totp = code % 1000000
+    print(f"your OTP is : {totp:06d}")
+    return f"{totp:06d}"
 
 def main():
     if len(sys.argv) != 3:
