@@ -2,6 +2,9 @@ import qrcode
 from PIL import Image
 
 def qr_gen(otp):
+    if not otp:
+        print("No seed. Stop.")
+        return
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,

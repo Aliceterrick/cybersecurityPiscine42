@@ -16,7 +16,7 @@ def save_key(filename):
         return
     try:
         dec = int(key, 16)
-        hexa = str(key)
+        hexa = bytes.fromhex(key)
     except:
         print("key must be hexadecimal")
         return
@@ -31,8 +31,8 @@ def save_key(filename):
     try:
         with open('ft_otp.key', 'wb') as f:
             f.write(fernet.encrypt(hexa))
-    except:
-        print('error saving key')
+    except Exception as e:
+        print('error saving key', e)
         return
     print("Key saved to ft_otp.key")
 
@@ -42,16 +42,16 @@ def generate_otp(file):
             fkey = f.read()
         fkey = Fernet(fkey)
     except:
-        print('Error reading the .key')
-        return
+        print('Error reading the hidden file .key')
+        return None
     try:
         with open(file, 'rb') as f:
             encr_key = f.read()
-        key = fkey.decrypt(encr_key).decode()
-        key_bytes = bytes.fromhex(key)
+        key_bytes = fkey.decrypt(encr_key)
+
     except:
         print('Error reading the key')
-        return
+        return None
     counter = int(time.time() // 30)
     counter = counter.to_bytes(8, byteorder='big')
     hs = hmac.new(key_bytes, counter, "sha1")
